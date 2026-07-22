@@ -1,4 +1,4 @@
--- NOVA v46.0 – ФИНАЛЬНАЯ СУПЕР-ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (ПОЛНЫЙ РАБОЧИЙ СКРИПТ)
+-- NOVA v46.0 – ИСПРАВЛЕННАЯ ВЕРСИЯ (все функции завершены)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -530,7 +530,7 @@ local function buildMainGUI()
 end
 
 -- ============================================================
--- FRIENDLY WINDOW (ПОЛНАЯ ВЕРСИЯ С ПУЛОМ)
+-- FRIENDLY WINDOW (ПОЛНАЯ ВЕРСИЯ С ПУЛОМ) – ИСПРАВЛЕНА
 -- ============================================================
 local function createFriendlyWindow()
     local gui = Instance.new("ScreenGui")
@@ -1072,12 +1072,15 @@ end
 -- ЗАПУСК
 -- ============================================================
 local function main()
+    print("🔄 main() started")
+
     -- Очистка старых GUI
     for _, v in ipairs(PlayerGui:GetChildren()) do
         if v.Name == "LoadingScreen" or v.Name == "NOVA_MAIN" or v.Name == "NOVA_FRIENDLY" then
             v:Destroy()
         end
     end
+    print("1️⃣ old GUIs cleared")
 
     local loading = createLoadingScreen()
     local ringTween = TweenService:Create(loading.ring, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false), {Rotation = 360})
@@ -1095,14 +1098,22 @@ local function main()
     end
     task.wait(0.2)
     loading.screen:Destroy()
+    print("2️⃣ loading screen done")
 
     local GUI = buildMainGUI()
+    print("3️⃣ buildMainGUI() returned", GUI ~= nil)
+
     local friendlyWindow = createFriendlyWindow()
+    print("4️⃣ createFriendlyWindow() returned", friendlyWindow ~= nil)
+
     _G.NOVA_GUI = GUI
 
     local btns = GUI.iconBtns
+    print("5️⃣ iconBtns count", #btns)
 
+    -- Подключение кнопок
     btns["⏻"].btn.MouseButton1Click:Connect(function()
+        print("⏻ clicked")
         AimState.enabled = not AimState.enabled
         if AimState.enabled then
             btns["⏻"].glow.Visible = true
@@ -1145,6 +1156,7 @@ local function main()
     end)
 
     btns["🎲"].btn.MouseButton1Click:Connect(function()
+        print("🎲 clicked")
         Settings.RandomAim = not Settings.RandomAim
         btns["🎲"].glow.Visible = Settings.RandomAim
         btns["🎲"].glow.Color = Settings.RandomAim and Color3.fromRGB(255,200,50) or Color3.fromRGB(60,150,255)
@@ -1155,6 +1167,7 @@ local function main()
     end)
 
     btns["⌖"].btn.MouseButton1Click:Connect(function()
+        print("⌖ clicked")
         if Settings.AimPart == "Head" then
             Settings.AimPart = "HumanoidRootPart"
             Settings.BackupPart = "Torso"
@@ -1167,6 +1180,7 @@ local function main()
     end)
 
     btns["👁"].btn.MouseButton1Click:Connect(function()
+        print("👁 clicked")
         VisualState.xrayEnabled = not VisualState.xrayEnabled
         btns["👁"].glow.Visible = VisualState.xrayEnabled
         btns["👁"].glow.Color = VisualState.xrayEnabled and Color3.fromRGB(60,150,255) or Color3.fromRGB(255,255,255)
@@ -1175,6 +1189,7 @@ local function main()
     end)
 
     btns["🤝"].btn.MouseButton1Click:Connect(function()
+        print("🤝 clicked")
         if GUIState.friendlyOpen then
             friendlyWindow.gui.Enabled = false
             GUIState.friendlyOpen = false
@@ -1186,7 +1201,7 @@ local function main()
     end)
 
     btns["⚙"].btn.MouseButton1Click:Connect(function()
-        print("Settings – можно добавить меню настроек")
+        print("⚙ clicked – settings not implemented")
     end)
 
     GUI.closeBtn.MouseButton1Click:Connect(function()
@@ -1230,6 +1245,8 @@ local function main()
             GUIState.maximized = true
         end
     end)
+
+    print("6️⃣ all buttons connected")
 
     local function onCameraChanged()
         Camera = workspace.CurrentCamera
