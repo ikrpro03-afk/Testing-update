@@ -1,4 +1,4 @@
--- NOVA v46.0 – ИСПРАВЛЕННАЯ ВЕРСИЯ (все функции завершены)
+-- NOVA v46.0 – ИСПРАВЛЕННАЯ ВЕРСИЯ (ПОРЯДОК ФУНКЦИЙ ИСПРАВЛЕН)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -71,46 +71,7 @@ local GUIState = {
 }
 
 -- ============================================================
--- ЛОКАЛЬНЫЙ СПИСОК ИГРОКОВ
--- ============================================================
-local localPlayers = {}
-local function updatePlayersList()
-    localPlayers = {}
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= Player then
-            table.insert(localPlayers, plr)
-        end
-    end
-end
-Players.PlayerAdded:Connect(function(plr)
-    if plr ~= Player then
-        table.insert(localPlayers, plr)
-        plr.CharacterAdded:Connect(function()
-            VisualState.partsCache[plr] = nil
-        end)
-    end
-end)
-Players.PlayerRemoving:Connect(function(plr)
-    for i, p in ipairs(localPlayers) do
-        if p == plr then
-            table.remove(localPlayers, i)
-            break
-        end
-    end
-    VisualState.partsCache[plr] = nil
-    releaseBox(plr)
-end)
-for _, plr in pairs(Players:GetPlayers()) do
-    if plr ~= Player then
-        plr.CharacterAdded:Connect(function()
-            VisualState.partsCache[plr] = nil
-        end)
-    end
-end
-updatePlayersList()
-
--- ============================================================
--- УТИЛИТЫ
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (УТИЛИТЫ)
 -- ============================================================
 local Utils = {}
 
@@ -223,478 +184,7 @@ end
 function Friendly.clear() Friendly.dict = {} end
 
 -- ============================================================
--- ЗАГРУЗОЧНЫЙ ЭКРАН
--- ============================================================
-local function createLoadingScreen()
-    local screen = Instance.new("ScreenGui")
-    screen.Name = "LoadingScreen"
-    screen.Parent = PlayerGui
-    screen.DisplayOrder = 1000
-
-    local overlay = Instance.new("Frame")
-    overlay.Size = UDim2.new(1,0,1,0)
-    overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
-    overlay.BackgroundTransparency = 0.8
-    overlay.BorderSizePixel = 0
-    overlay.Parent = screen
-
-    local panel = Instance.new("Frame")
-    panel.Size = UDim2.new(0,360,0,200)
-    panel.Position = UDim2.new(0.5,-180,0.5,-100)
-    panel.BackgroundColor3 = Color3.fromRGB(12,18,40)
-    panel.BackgroundTransparency = 0.05
-    panel.BorderSizePixel = 0
-    panel.ClipsDescendants = true
-    panel.Parent = screen
-    local panelCorner = Instance.new("UICorner")
-    panelCorner.CornerRadius = UDim.new(0,20)
-    panelCorner.Parent = panel
-    local panelStroke = Instance.new("UIStroke")
-    panelStroke.Color = Color3.fromRGB(60,150,255)
-    panelStroke.Thickness = 1.5
-    panelStroke.Transparency = 0.5
-    panelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    panelStroke.Parent = panel
-
-    local logo = Instance.new("TextLabel")
-    logo.Size = UDim2.new(0,60,0,60)
-    logo.Position = UDim2.new(0.5,-30,0,20)
-    logo.BackgroundTransparency = 1
-    logo.Text = "NOVA"
-    logo.TextColor3 = Color3.fromRGB(100,200,255)
-    logo.TextSize = 36
-    logo.Font = Enum.Font.GothamBold
-    logo.Parent = panel
-
-    local ring = Instance.new("ImageLabel")
-    ring.Size = UDim2.new(0,70,0,70)
-    ring.Position = UDim2.new(0.5,-35,0,15)
-    ring.BackgroundTransparency = 1
-    ring.Image = "rbxassetid://4911621264"
-    ring.ImageColor3 = Color3.fromRGB(60,150,255)
-    ring.ImageTransparency = 0.6
-    ring.Parent = panel
-
-    local statusText = Instance.new("TextLabel")
-    statusText.Size = UDim2.new(1,0,0,20)
-    statusText.Position = UDim2.new(0,0,0,90)
-    statusText.BackgroundTransparency = 1
-    statusText.Text = "Loading..."
-    statusText.TextColor3 = Color3.fromRGB(200,220,255)
-    statusText.TextSize = 14
-    statusText.Font = Enum.Font.Gotham
-    statusText.Parent = panel
-
-    local versionText = Instance.new("TextLabel")
-    versionText.Size = UDim2.new(1,0,0,16)
-    versionText.Position = UDim2.new(0,0,0,115)
-    versionText.BackgroundTransparency = 1
-    versionText.Text = "v46.0"
-    versionText.TextColor3 = Color3.fromRGB(150,180,220)
-    versionText.TextSize = 11
-    versionText.Font = Enum.Font.Gotham
-    versionText.Parent = panel
-
-    local progressBar = Instance.new("Frame")
-    progressBar.Size = UDim2.new(0,280,0,4)
-    progressBar.Position = UDim2.new(0.5,-140,0,145)
-    progressBar.BackgroundColor3 = Color3.fromRGB(30,50,80)
-    progressBar.BorderSizePixel = 0
-    progressBar.Parent = panel
-    local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim.new(0,2)
-    barCorner.Parent = progressBar
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new(0,0,1,0)
-    fill.BackgroundColor3 = Color3.fromRGB(60,150,255)
-    fill.BorderSizePixel = 0
-    fill.Parent = progressBar
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(0,2)
-    fillCorner.Parent = fill
-
-    return { screen = screen, ring = ring, statusText = statusText, fill = fill }
-end
-
--- ============================================================
--- ПОСТРОЕНИЕ GUI (ПОЛНАЯ ВЕРСИЯ)
--- ============================================================
-local function buildMainGUI()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NOVA_MAIN"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.Parent = PlayerGui
-    gui.DisplayOrder = 999
-
-    local main = Instance.new("Frame")
-    main.Size = UDim2.new(0,WINDOW_W,0,WINDOW_H)
-    main.Position = UDim2.new(0,20,0,20)
-    main.BackgroundColor3 = Color3.fromRGB(10,18,42)
-    main.BackgroundTransparency = 0.05
-    main.BorderSizePixel = 0
-    main.ClipsDescendants = true
-    main.Parent = gui
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0,16)
-    corner.Parent = main
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(60,150,255)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.5
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = main
-
-    local header = Instance.new("Frame")
-    header.Size = UDim2.new(1,0,0,HEADER_H)
-    header.BackgroundColor3 = Color3.fromRGB(14,24,54)
-    header.BackgroundTransparency = 0.1
-    header.BorderSizePixel = 0
-    header.Parent = main
-    local hcorner = Instance.new("UICorner")
-    hcorner.CornerRadius = UDim.new(0,16)
-    hcorner.Parent = header
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,-120,1,0)
-    title.Position = UDim2.new(0,14,0,0)
-    title.BackgroundTransparency = 1
-    title.Text = "NOVA"
-    title.TextColor3 = Color3.fromRGB(200,230,255)
-    title.TextSize = 16
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Font = Enum.Font.GothamBold
-    title.Parent = header
-
-    local function winBtn(text, x, color, cb)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0,28,0,28)
-        btn.Position = UDim2.new(1,x,0,6)
-        btn.BackgroundColor3 = Color3.fromRGB(30,50,80)
-        btn.BackgroundTransparency = 0.3
-        btn.BorderSizePixel = 0
-        btn.Text = text
-        btn.TextColor3 = color
-        btn.TextSize = 16
-        btn.Font = Enum.Font.Gotham
-        btn.Parent = header
-        local bcorner = Instance.new("UICorner")
-        bcorner.CornerRadius = UDim.new(0,8)
-        bcorner.Parent = btn
-        local bstroke = Instance.new("UIStroke")
-        bstroke.Color = color
-        bstroke.Thickness = 1
-        bstroke.Transparency = 0.6
-        bstroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        bstroke.Parent = btn
-        if cb then btn.MouseButton1Click:Connect(cb) end
-        return btn
-    end
-
-    local minBtn = winBtn("─", -84, Color3.fromRGB(200,220,255))
-    local maxBtn = winBtn("□", -56, Color3.fromRGB(200,220,255))
-    local closeBtn = winBtn("✕", -28, Color3.fromRGB(255,100,100))
-
-    local status = Instance.new("TextLabel")
-    status.Size = UDim2.new(1,-20,0,18)
-    status.Position = UDim2.new(0,10,0,HEADER_H+10)
-    status.BackgroundTransparency = 1
-    status.Text = "DISABLED"
-    status.TextColor3 = Color3.fromRGB(200,220,240)
-    status.TextSize = 10
-    status.TextXAlignment = Enum.TextXAlignment.Left
-    status.Font = Enum.Font.Gotham
-    status.Parent = main
-
-    local targetLabel = Instance.new("TextLabel")
-    targetLabel.Size = UDim2.new(1,-20,0,18)
-    targetLabel.Position = UDim2.new(0,10,0,HEADER_H+28)
-    targetLabel.BackgroundTransparency = 1
-    targetLabel.Text = "TARGET: NONE"
-    targetLabel.TextColor3 = Color3.fromRGB(200,220,240)
-    targetLabel.TextSize = 10
-    targetLabel.TextXAlignment = Enum.TextXAlignment.Left
-    targetLabel.Font = Enum.Font.Gotham
-    targetLabel.Parent = main
-
-    local killsLabel = Instance.new("TextLabel")
-    killsLabel.Size = UDim2.new(1,-20,0,18)
-    killsLabel.Position = UDim2.new(0,10,0,HEADER_H+46)
-    killsLabel.BackgroundTransparency = 1
-    killsLabel.Text = "KILLS: 0"
-    killsLabel.TextColor3 = Color3.fromRGB(240,220,160)
-    killsLabel.TextSize = 10
-    killsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    killsLabel.Font = Enum.Font.Gotham
-    killsLabel.Parent = main
-
-    local divider = Instance.new("Frame")
-    divider.Size = UDim2.new(1,-20,0,1)
-    divider.Position = UDim2.new(0,10,0,HEADER_H+70)
-    divider.BackgroundColor3 = Color3.fromRGB(80,140,255)
-    divider.BackgroundTransparency = 0.4
-    divider.BorderSizePixel = 0
-    divider.Parent = main
-
-    local iconNames = {"⏻","🎲","⌖","👁","🤝","⚙"}
-    local iconBtns = {}
-    local startX = (WINDOW_W - (ICON_SIZE*6 + ICON_SPACING*5)) / 2
-    for i, icon in ipairs(iconNames) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0,ICON_SIZE,0,ICON_SIZE)
-        btn.Position = UDim2.new(0,startX + (ICON_SIZE+ICON_SPACING)*(i-1),0,120)
-        btn.BackgroundColor3 = Color3.fromRGB(16,24,50)
-        btn.BackgroundTransparency = 0.3
-        btn.BorderSizePixel = 0
-        btn.Text = icon
-        btn.TextColor3 = Color3.fromRGB(220,230,255)
-        btn.TextSize = 18
-        btn.Font = Enum.Font.Gotham
-        btn.Parent = main
-        local bcorner = Instance.new("UICorner")
-        bcorner.CornerRadius = UDim.new(0,10)
-        bcorner.Parent = btn
-        local bstroke = Instance.new("UIStroke")
-        bstroke.Color = Color3.fromRGB(60,150,255)
-        bstroke.Thickness = 1.2
-        bstroke.Transparency = 0.8
-        bstroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        bstroke.Parent = btn
-        local glow = Instance.new("UIStroke")
-        glow.Color = Color3.fromRGB(60,150,255)
-        glow.Thickness = 2
-        glow.Transparency = 0.8
-        glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        glow.Parent = btn
-        glow.Visible = false
-        iconBtns[icon] = { btn = btn, glow = glow }
-    end
-
-    local fovCircle = Instance.new("ImageLabel")
-    fovCircle.Size = UDim2.new(0,Settings.FOV*2,0,Settings.FOV*2)
-    fovCircle.Position = UDim2.new(0.5,-Settings.FOV,0.5,-Settings.FOV)
-    fovCircle.BackgroundTransparency = 1
-    fovCircle.Image = "rbxassetid://4911621264"
-    fovCircle.ImageColor3 = Color3.fromRGB(255,255,255)
-    fovCircle.ImageTransparency = 0.6
-    fovCircle.Visible = false
-    fovCircle.Parent = gui
-
-    local crosshair = Instance.new("Frame")
-    crosshair.Size = UDim2.new(0,0,0,0)
-    crosshair.BackgroundTransparency = 1
-    crosshair.Visible = false
-    crosshair.Parent = gui
-    local function updateCrosshair()
-        local center = Utils.getCenter()
-        crosshair.Position = UDim2.fromOffset(center.X, center.Y)
-    end
-    local function createDot()
-        for _,c in pairs(crosshair:GetChildren()) do c:Destroy() end
-        local dot = Instance.new("Frame")
-        dot.Size = UDim2.new(0,3,0,3)
-        dot.Position = UDim2.new(0.5,-1.5,0.5,-1.5)
-        dot.BackgroundColor3 = Color3.fromRGB(255,255,255)
-        dot.BorderSizePixel = 0
-        dot.Parent = crosshair
-        local dcorner = Instance.new("UICorner")
-        dcorner.CornerRadius = UDim.new(1,0)
-        dcorner.Parent = dot
-    end
-    createDot()
-    updateCrosshair()
-
-    local xrayHolder = Instance.new("Frame")
-    xrayHolder.Size = UDim2.new(1,0,1,0)
-    xrayHolder.BackgroundTransparency = 1
-    xrayHolder.Parent = gui
-    VisualState.xrayContainer = xrayHolder
-
-    return {
-        gui = gui,
-        main = main,
-        header = header,
-        minBtn = minBtn,
-        maxBtn = maxBtn,
-        closeBtn = closeBtn,
-        status = status,
-        targetLabel = targetLabel,
-        killsLabel = killsLabel,
-        iconBtns = iconBtns,
-        fovCircle = fovCircle,
-        crosshair = crosshair,
-        updateCrosshair = updateCrosshair,
-        xrayHolder = xrayHolder,
-    }
-end
-
--- ============================================================
--- FRIENDLY WINDOW (ПОЛНАЯ ВЕРСИЯ С ПУЛОМ) – ИСПРАВЛЕНА
--- ============================================================
-local function createFriendlyWindow()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "NOVA_FRIENDLY"
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.Parent = PlayerGui
-    gui.DisplayOrder = 998
-    gui.Enabled = false
-
-    local window = Instance.new("Frame")
-    window.Size = UDim2.new(0,320,0,420)
-    window.Position = UDim2.new(0.5,-160,0.5,-210)
-    window.BackgroundColor3 = Color3.fromRGB(10,18,42)
-    window.BackgroundTransparency = 0.05
-    window.BorderSizePixel = 0
-    window.ClipsDescendants = true
-    window.Parent = gui
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0,16)
-    corner.Parent = window
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = Color3.fromRGB(60,150,255)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 0.5
-    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    stroke.Parent = window
-
-    local header = Instance.new("Frame")
-    header.Size = UDim2.new(1,0,0,36)
-    header.BackgroundColor3 = Color3.fromRGB(14,24,54)
-    header.BackgroundTransparency = 0.1
-    header.BorderSizePixel = 0
-    header.Parent = window
-    local hcorner = Instance.new("UICorner")
-    hcorner.CornerRadius = UDim.new(0,16)
-    hcorner.Parent = header
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1,-60,1,0)
-    title.Position = UDim2.new(0,14,0,0)
-    title.BackgroundTransparency = 1
-    title.Text = "FRIENDLY FAIR"
-    title.TextColor3 = Color3.fromRGB(200,230,255)
-    title.TextSize = 14
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Font = Enum.Font.GothamBold
-    title.Parent = header
-
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0,28,0,28)
-    closeBtn.Position = UDim2.new(1,-34,0,4)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(30,50,80)
-    closeBtn.BackgroundTransparency = 0.3
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.fromRGB(255,100,100)
-    closeBtn.TextSize = 16
-    closeBtn.Font = Enum.Font.Gotham
-    closeBtn.Parent = header
-
-    local listFrame = Instance.new("ScrollingFrame")
-    listFrame.Size = UDim2.new(1,-20,1,-50)
-    listFrame.Position = UDim2.new(0,10,0,44)
-    listFrame.BackgroundTransparency = 1
-    listFrame.BorderSizePixel = 0
-    listFrame.CanvasSize = UDim2.new(0,0,0,0)
-    listFrame.ScrollBarThickness = 4
-    listFrame.ScrollBarImageColor3 = Color3.fromRGB(60,150,255)
-    listFrame.Parent = window
-
-    -- Пул строк
-    local rowPool = {}
-    local function getRow()
-        for _, row in ipairs(rowPool) do
-            if not row.used then
-                row.used = true
-                row.frame.Visible = true
-                return row
-            end
-        end
-        local frame = Instance.new("Frame")
-        frame.Size = UDim2.new(1,0,0,32)
-        frame.BackgroundColor3 = Color3.fromRGB(20,35,65)
-        frame.BackgroundTransparency = 0.3
-        frame.BorderSizePixel = 0
-        frame.Visible = false
-        frame.Parent = listFrame
-        local rcorner = Instance.new("UICorner")
-        rcorner.CornerRadius = UDim.new(0,6)
-        rcorner.Parent = frame
-
-        local name = Instance.new("TextLabel")
-        name.Size = UDim2.new(1,-80,1,0)
-        name.Position = UDim2.new(0,10,0,0)
-        name.BackgroundTransparency = 1
-        name.Text = ""
-        name.TextColor3 = Color3.fromRGB(200,220,255)
-        name.TextSize = 12
-        name.TextXAlignment = Enum.TextXAlignment.Left
-        name.Font = Enum.Font.Gotham
-        name.Parent = frame
-
-        local action = Instance.new("TextButton")
-        action.Size = UDim2.new(0,30,0,26)
-        action.Position = UDim2.new(1,-36,0,3)
-        action.BackgroundColor3 = Color3.fromRGB(30,50,80)
-        action.BackgroundTransparency = 0.5
-        action.BorderSizePixel = 0
-        action.Text = ""
-        action.TextColor3 = Color3.fromRGB(255,255,255)
-        action.TextSize = 16
-        action.Font = Enum.Font.Gotham
-        action.Parent = frame
-
-        local tag = Instance.new("TextLabel")
-        tag.Size = UDim2.new(0,50,1,0)
-        tag.Position = UDim2.new(1,-100,0,0)
-        tag.BackgroundTransparency = 1
-        tag.Text = ""
-        tag.TextColor3 = Color3.fromRGB(0,255,150)
-        tag.TextSize = 10
-        tag.Font = Enum.Font.GothamBold
-        tag.TextXAlignment = Enum.TextXAlignment.Right
-        tag.Parent = frame
-
-        local row = { frame = frame, name = name, action = action, tag = tag, used = false }
-        table.insert(rowPool, row)
-        return row
-    end
-
-    local function releaseAllRows()
-        for _, row in ipairs(rowPool) do
-            row.used = false
-            row.frame.Visible = false
-        end
-    end
-
-    local function updateList()
-        releaseAllRows()
-        local count = 0
-        for _, plr in ipairs(localPlayers) do
-            count = count + 1
-            local row = getRow()
-            row.frame.Visible = true
-            row.name.Text = plr.Name
-            local isF = Friendly.isFriendly(plr)
-            row.action.Text = isF and "🗑" or "➕"
-            row.action.TextColor3 = isF and Color3.fromRGB(255,100,100) or Color3.fromRGB(100,255,150)
-            row.tag.Text = isF and "FRIEND" or ""
-            row.action.MouseButton1Click:Connect(function()
-                Friendly.toggle(plr)
-                if AimState.target == plr then AimState.target = nil end
-                updateList()
-            end)
-        end
-        listFrame.CanvasSize = UDim2.new(0,0,0, count*36 + 10)
-    end
-
-    return { gui = gui, update = updateList, closeBtn = closeBtn }
-end
-
--- ============================================================
--- X-RAY И AIM (ОПТИМИЗИРОВАННЫЕ)
+-- X-RAY И AIM (ВСЕ ФУНКЦИИ ОБЪЯВЛЕНЫ ДО ИХ ИСПОЛЬЗОВАНИЯ)
 -- ============================================================
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -934,9 +424,7 @@ local function updateXRay()
     end
 end
 
--- ============================================================
 -- AIM (Top-5 без сортировки)
--- ============================================================
 local topCandidates = {
     {plr = nil, dist = math.huge},
     {plr = nil, dist = math.huge},
@@ -1069,18 +557,518 @@ local function processAim(dt)
 end
 
 -- ============================================================
+-- ЛОКАЛЬНЫЙ СПИСОК ИГРОКОВ (после объявления releaseBox)
+-- ============================================================
+local localPlayers = {}
+local function updatePlayersList()
+    localPlayers = {}
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= Player then
+            table.insert(localPlayers, plr)
+        end
+    end
+end
+Players.PlayerAdded:Connect(function(plr)
+    if plr ~= Player then
+        table.insert(localPlayers, plr)
+        plr.CharacterAdded:Connect(function()
+            VisualState.partsCache[plr] = nil
+        end)
+    end
+end)
+Players.PlayerRemoving:Connect(function(plr)
+    for i, p in ipairs(localPlayers) do
+        if p == plr then
+            table.remove(localPlayers, i)
+            break
+        end
+    end
+    VisualState.partsCache[plr] = nil
+    releaseBox(plr)  -- теперь releaseBox уже объявлена
+end)
+for _, plr in pairs(Players:GetPlayers()) do
+    if plr ~= Player then
+        plr.CharacterAdded:Connect(function()
+            VisualState.partsCache[plr] = nil
+        end)
+    end
+end
+updatePlayersList()
+
+-- ============================================================
+-- GUI (ЗАГРУЗОЧНЫЙ ЭКРАН, MAIN WINDOW, FRIENDLY WINDOW)
+-- ============================================================
+local function createLoadingScreen()
+    local screen = Instance.new("ScreenGui")
+    screen.Name = "LoadingScreen"
+    screen.Parent = PlayerGui
+    screen.DisplayOrder = 1000
+
+    local overlay = Instance.new("Frame")
+    overlay.Size = UDim2.new(1,0,1,0)
+    overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+    overlay.BackgroundTransparency = 0.8
+    overlay.BorderSizePixel = 0
+    overlay.Parent = screen
+
+    local panel = Instance.new("Frame")
+    panel.Size = UDim2.new(0,360,0,200)
+    panel.Position = UDim2.new(0.5,-180,0.5,-100)
+    panel.BackgroundColor3 = Color3.fromRGB(12,18,40)
+    panel.BackgroundTransparency = 0.05
+    panel.BorderSizePixel = 0
+    panel.ClipsDescendants = true
+    panel.Parent = screen
+    local panelCorner = Instance.new("UICorner")
+    panelCorner.CornerRadius = UDim.new(0,20)
+    panelCorner.Parent = panel
+    local panelStroke = Instance.new("UIStroke")
+    panelStroke.Color = Color3.fromRGB(60,150,255)
+    panelStroke.Thickness = 1.5
+    panelStroke.Transparency = 0.5
+    panelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    panelStroke.Parent = panel
+
+    local logo = Instance.new("TextLabel")
+    logo.Size = UDim2.new(0,60,0,60)
+    logo.Position = UDim2.new(0.5,-30,0,20)
+    logo.BackgroundTransparency = 1
+    logo.Text = "NOVA"
+    logo.TextColor3 = Color3.fromRGB(100,200,255)
+    logo.TextSize = 36
+    logo.Font = Enum.Font.GothamBold
+    logo.Parent = panel
+
+    local ring = Instance.new("ImageLabel")
+    ring.Size = UDim2.new(0,70,0,70)
+    ring.Position = UDim2.new(0.5,-35,0,15)
+    ring.BackgroundTransparency = 1
+    ring.Image = "rbxassetid://4911621264"
+    ring.ImageColor3 = Color3.fromRGB(60,150,255)
+    ring.ImageTransparency = 0.6
+    ring.Parent = panel
+
+    local statusText = Instance.new("TextLabel")
+    statusText.Size = UDim2.new(1,0,0,20)
+    statusText.Position = UDim2.new(0,0,0,90)
+    statusText.BackgroundTransparency = 1
+    statusText.Text = "Loading..."
+    statusText.TextColor3 = Color3.fromRGB(200,220,255)
+    statusText.TextSize = 14
+    statusText.Font = Enum.Font.Gotham
+    statusText.Parent = panel
+
+    local versionText = Instance.new("TextLabel")
+    versionText.Size = UDim2.new(1,0,0,16)
+    versionText.Position = UDim2.new(0,0,0,115)
+    versionText.BackgroundTransparency = 1
+    versionText.Text = "v46.0"
+    versionText.TextColor3 = Color3.fromRGB(150,180,220)
+    versionText.TextSize = 11
+    versionText.Font = Enum.Font.Gotham
+    versionText.Parent = panel
+
+    local progressBar = Instance.new("Frame")
+    progressBar.Size = UDim2.new(0,280,0,4)
+    progressBar.Position = UDim2.new(0.5,-140,0,145)
+    progressBar.BackgroundColor3 = Color3.fromRGB(30,50,80)
+    progressBar.BorderSizePixel = 0
+    progressBar.Parent = panel
+    local barCorner = Instance.new("UICorner")
+    barCorner.CornerRadius = UDim.new(0,2)
+    barCorner.Parent = progressBar
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(0,0,1,0)
+    fill.BackgroundColor3 = Color3.fromRGB(60,150,255)
+    fill.BorderSizePixel = 0
+    fill.Parent = progressBar
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(0,2)
+    fillCorner.Parent = fill
+
+    return { screen = screen, ring = ring, statusText = statusText, fill = fill }
+end
+
+local function buildMainGUI()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NOVA_MAIN"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = PlayerGui
+    gui.DisplayOrder = 999
+
+    local main = Instance.new("Frame")
+    main.Size = UDim2.new(0,WINDOW_W,0,WINDOW_H)
+    main.Position = UDim2.new(0,20,0,20)
+    main.BackgroundColor3 = Color3.fromRGB(10,18,42)
+    main.BackgroundTransparency = 0.05
+    main.BorderSizePixel = 0
+    main.ClipsDescendants = true
+    main.Parent = gui
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,16)
+    corner.Parent = main
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(60,150,255)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = main
+
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1,0,0,HEADER_H)
+    header.BackgroundColor3 = Color3.fromRGB(14,24,54)
+    header.BackgroundTransparency = 0.1
+    header.BorderSizePixel = 0
+    header.Parent = main
+    local hcorner = Instance.new("UICorner")
+    hcorner.CornerRadius = UDim.new(0,16)
+    hcorner.Parent = header
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,-120,1,0)
+    title.Position = UDim2.new(0,14,0,0)
+    title.BackgroundTransparency = 1
+    title.Text = "NOVA"
+    title.TextColor3 = Color3.fromRGB(200,230,255)
+    title.TextSize = 16
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Font = Enum.Font.GothamBold
+    title.Parent = header
+
+    local function winBtn(text, x, color, cb)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0,28,0,28)
+        btn.Position = UDim2.new(1,x,0,6)
+        btn.BackgroundColor3 = Color3.fromRGB(30,50,80)
+        btn.BackgroundTransparency = 0.3
+        btn.BorderSizePixel = 0
+        btn.Text = text
+        btn.TextColor3 = color
+        btn.TextSize = 16
+        btn.Font = Enum.Font.Gotham
+        btn.Parent = header
+        local bcorner = Instance.new("UICorner")
+        bcorner.CornerRadius = UDim.new(0,8)
+        bcorner.Parent = btn
+        local bstroke = Instance.new("UIStroke")
+        bstroke.Color = color
+        bstroke.Thickness = 1
+        bstroke.Transparency = 0.6
+        bstroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        bstroke.Parent = btn
+        if cb then btn.MouseButton1Click:Connect(cb) end
+        return btn
+    end
+
+    local minBtn = winBtn("─", -84, Color3.fromRGB(200,220,255))
+    local maxBtn = winBtn("□", -56, Color3.fromRGB(200,220,255))
+    local closeBtn = winBtn("✕", -28, Color3.fromRGB(255,100,100))
+
+    local status = Instance.new("TextLabel")
+    status.Size = UDim2.new(1,-20,0,18)
+    status.Position = UDim2.new(0,10,0,HEADER_H+10)
+    status.BackgroundTransparency = 1
+    status.Text = "DISABLED"
+    status.TextColor3 = Color3.fromRGB(200,220,240)
+    status.TextSize = 10
+    status.TextXAlignment = Enum.TextXAlignment.Left
+    status.Font = Enum.Font.Gotham
+    status.Parent = main
+
+    local targetLabel = Instance.new("TextLabel")
+    targetLabel.Size = UDim2.new(1,-20,0,18)
+    targetLabel.Position = UDim2.new(0,10,0,HEADER_H+28)
+    targetLabel.BackgroundTransparency = 1
+    targetLabel.Text = "TARGET: NONE"
+    targetLabel.TextColor3 = Color3.fromRGB(200,220,240)
+    targetLabel.TextSize = 10
+    targetLabel.TextXAlignment = Enum.TextXAlignment.Left
+    targetLabel.Font = Enum.Font.Gotham
+    targetLabel.Parent = main
+
+    local killsLabel = Instance.new("TextLabel")
+    killsLabel.Size = UDim2.new(1,-20,0,18)
+    killsLabel.Position = UDim2.new(0,10,0,HEADER_H+46)
+    killsLabel.BackgroundTransparency = 1
+    killsLabel.Text = "KILLS: 0"
+    killsLabel.TextColor3 = Color3.fromRGB(240,220,160)
+    killsLabel.TextSize = 10
+    killsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    killsLabel.Font = Enum.Font.Gotham
+    killsLabel.Parent = main
+
+    local divider = Instance.new("Frame")
+    divider.Size = UDim2.new(1,-20,0,1)
+    divider.Position = UDim2.new(0,10,0,HEADER_H+70)
+    divider.BackgroundColor3 = Color3.fromRGB(80,140,255)
+    divider.BackgroundTransparency = 0.4
+    divider.BorderSizePixel = 0
+    divider.Parent = main
+
+    local iconNames = {"⏻","🎲","⌖","👁","🤝","⚙"}
+    local iconBtns = {}
+    local startX = (WINDOW_W - (ICON_SIZE*6 + ICON_SPACING*5)) / 2
+    for i, icon in ipairs(iconNames) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0,ICON_SIZE,0,ICON_SIZE)
+        btn.Position = UDim2.new(0,startX + (ICON_SIZE+ICON_SPACING)*(i-1),0,120)
+        btn.BackgroundColor3 = Color3.fromRGB(16,24,50)
+        btn.BackgroundTransparency = 0.3
+        btn.BorderSizePixel = 0
+        btn.Text = icon
+        btn.TextColor3 = Color3.fromRGB(220,230,255)
+        btn.TextSize = 18
+        btn.Font = Enum.Font.Gotham
+        btn.Parent = main
+        local bcorner = Instance.new("UICorner")
+        bcorner.CornerRadius = UDim.new(0,10)
+        bcorner.Parent = btn
+        local bstroke = Instance.new("UIStroke")
+        bstroke.Color = Color3.fromRGB(60,150,255)
+        bstroke.Thickness = 1.2
+        bstroke.Transparency = 0.8
+        bstroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        bstroke.Parent = btn
+        local glow = Instance.new("UIStroke")
+        glow.Color = Color3.fromRGB(60,150,255)
+        glow.Thickness = 2
+        glow.Transparency = 0.8
+        glow.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        glow.Parent = btn
+        glow.Visible = false
+        iconBtns[icon] = { btn = btn, glow = glow }
+    end
+
+    local fovCircle = Instance.new("ImageLabel")
+    fovCircle.Size = UDim2.new(0,Settings.FOV*2,0,Settings.FOV*2)
+    fovCircle.Position = UDim2.new(0.5,-Settings.FOV,0.5,-Settings.FOV)
+    fovCircle.BackgroundTransparency = 1
+    fovCircle.Image = "rbxassetid://4911621264"
+    fovCircle.ImageColor3 = Color3.fromRGB(255,255,255)
+    fovCircle.ImageTransparency = 0.6
+    fovCircle.Visible = false
+    fovCircle.Parent = gui
+
+    local crosshair = Instance.new("Frame")
+    crosshair.Size = UDim2.new(0,0,0,0)
+    crosshair.BackgroundTransparency = 1
+    crosshair.Visible = false
+    crosshair.Parent = gui
+    local function updateCrosshair()
+        local center = Utils.getCenter()
+        crosshair.Position = UDim2.fromOffset(center.X, center.Y)
+    end
+    local function createDot()
+        for _,c in pairs(crosshair:GetChildren()) do c:Destroy() end
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.new(0,3,0,3)
+        dot.Position = UDim2.new(0.5,-1.5,0.5,-1.5)
+        dot.BackgroundColor3 = Color3.fromRGB(255,255,255)
+        dot.BorderSizePixel = 0
+        dot.Parent = crosshair
+        local dcorner = Instance.new("UICorner")
+        dcorner.CornerRadius = UDim.new(1,0)
+        dcorner.Parent = dot
+    end
+    createDot()
+    updateCrosshair()
+
+    local xrayHolder = Instance.new("Frame")
+    xrayHolder.Size = UDim2.new(1,0,1,0)
+    xrayHolder.BackgroundTransparency = 1
+    xrayHolder.Parent = gui
+    VisualState.xrayContainer = xrayHolder
+
+    return {
+        gui = gui,
+        main = main,
+        header = header,
+        minBtn = minBtn,
+        maxBtn = maxBtn,
+        closeBtn = closeBtn,
+        status = status,
+        targetLabel = targetLabel,
+        killsLabel = killsLabel,
+        iconBtns = iconBtns,
+        fovCircle = fovCircle,
+        crosshair = crosshair,
+        updateCrosshair = updateCrosshair,
+        xrayHolder = xrayHolder,
+    }
+end
+
+local function createFriendlyWindow()
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "NOVA_FRIENDLY"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = PlayerGui
+    gui.DisplayOrder = 998
+    gui.Enabled = false
+
+    local window = Instance.new("Frame")
+    window.Size = UDim2.new(0,320,0,420)
+    window.Position = UDim2.new(0.5,-160,0.5,-210)
+    window.BackgroundColor3 = Color3.fromRGB(10,18,42)
+    window.BackgroundTransparency = 0.05
+    window.BorderSizePixel = 0
+    window.ClipsDescendants = true
+    window.Parent = gui
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0,16)
+    corner.Parent = window
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = Color3.fromRGB(60,150,255)
+    stroke.Thickness = 1.5
+    stroke.Transparency = 0.5
+    stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    stroke.Parent = window
+
+    local header = Instance.new("Frame")
+    header.Size = UDim2.new(1,0,0,36)
+    header.BackgroundColor3 = Color3.fromRGB(14,24,54)
+    header.BackgroundTransparency = 0.1
+    header.BorderSizePixel = 0
+    header.Parent = window
+    local hcorner = Instance.new("UICorner")
+    hcorner.CornerRadius = UDim.new(0,16)
+    hcorner.Parent = header
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,-60,1,0)
+    title.Position = UDim2.new(0,14,0,0)
+    title.BackgroundTransparency = 1
+    title.Text = "FRIENDLY FAIR"
+    title.TextColor3 = Color3.fromRGB(200,230,255)
+    title.TextSize = 14
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Font = Enum.Font.GothamBold
+    title.Parent = header
+
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.new(0,28,0,28)
+    closeBtn.Position = UDim2.new(1,-34,0,4)
+    closeBtn.BackgroundColor3 = Color3.fromRGB(30,50,80)
+    closeBtn.BackgroundTransparency = 0.3
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Text = "✕"
+    closeBtn.TextColor3 = Color3.fromRGB(255,100,100)
+    closeBtn.TextSize = 16
+    closeBtn.Font = Enum.Font.Gotham
+    closeBtn.Parent = header
+
+    local listFrame = Instance.new("ScrollingFrame")
+    listFrame.Size = UDim2.new(1,-20,1,-50)
+    listFrame.Position = UDim2.new(0,10,0,44)
+    listFrame.BackgroundTransparency = 1
+    listFrame.BorderSizePixel = 0
+    listFrame.CanvasSize = UDim2.new(0,0,0,0)
+    listFrame.ScrollBarThickness = 4
+    listFrame.ScrollBarImageColor3 = Color3.fromRGB(60,150,255)
+    listFrame.Parent = window
+
+    local rowPool = {}
+    local function getRow()
+        for _, row in ipairs(rowPool) do
+            if not row.used then
+                row.used = true
+                row.frame.Visible = true
+                return row
+            end
+        end
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1,0,0,32)
+        frame.BackgroundColor3 = Color3.fromRGB(20,35,65)
+        frame.BackgroundTransparency = 0.3
+        frame.BorderSizePixel = 0
+        frame.Visible = false
+        frame.Parent = listFrame
+        local rcorner = Instance.new("UICorner")
+        rcorner.CornerRadius = UDim.new(0,6)
+        rcorner.Parent = frame
+
+        local name = Instance.new("TextLabel")
+        name.Size = UDim2.new(1,-80,1,0)
+        name.Position = UDim2.new(0,10,0,0)
+        name.BackgroundTransparency = 1
+        name.Text = ""
+        name.TextColor3 = Color3.fromRGB(200,220,255)
+        name.TextSize = 12
+        name.TextXAlignment = Enum.TextXAlignment.Left
+        name.Font = Enum.Font.Gotham
+        name.Parent = frame
+
+        local action = Instance.new("TextButton")
+        action.Size = UDim2.new(0,30,0,26)
+        action.Position = UDim2.new(1,-36,0,3)
+        action.BackgroundColor3 = Color3.fromRGB(30,50,80)
+        action.BackgroundTransparency = 0.5
+        action.BorderSizePixel = 0
+        action.Text = ""
+        action.TextColor3 = Color3.fromRGB(255,255,255)
+        action.TextSize = 16
+        action.Font = Enum.Font.Gotham
+        action.Parent = frame
+
+        local tag = Instance.new("TextLabel")
+        tag.Size = UDim2.new(0,50,1,0)
+        tag.Position = UDim2.new(1,-100,0,0)
+        tag.BackgroundTransparency = 1
+        tag.Text = ""
+        tag.TextColor3 = Color3.fromRGB(0,255,150)
+        tag.TextSize = 10
+        tag.Font = Enum.Font.GothamBold
+        tag.TextXAlignment = Enum.TextXAlignment.Right
+        tag.Parent = frame
+
+        local row = { frame = frame, name = name, action = action, tag = tag, used = false }
+        table.insert(rowPool, row)
+        return row
+    end
+
+    local function releaseAllRows()
+        for _, row in ipairs(rowPool) do
+            row.used = false
+            row.frame.Visible = false
+        end
+    end
+
+    local function updateList()
+        releaseAllRows()
+        local count = 0
+        for _, plr in ipairs(localPlayers) do
+            count = count + 1
+            local row = getRow()
+            row.frame.Visible = true
+            row.name.Text = plr.Name
+            local isF = Friendly.isFriendly(plr)
+            row.action.Text = isF and "🗑" or "➕"
+            row.action.TextColor3 = isF and Color3.fromRGB(255,100,100) or Color3.fromRGB(100,255,150)
+            row.tag.Text = isF and "FRIEND" or ""
+            row.action.MouseButton1Click:Connect(function()
+                Friendly.toggle(plr)
+                if AimState.target == plr then AimState.target = nil end
+                updateList()
+            end)
+        end
+        listFrame.CanvasSize = UDim2.new(0,0,0, count*36 + 10)
+    end
+
+    return { gui = gui, update = updateList, closeBtn = closeBtn }
+end
+
+-- ============================================================
 -- ЗАПУСК
 -- ============================================================
 local function main()
-    print("🔄 main() started")
-
     -- Очистка старых GUI
     for _, v in ipairs(PlayerGui:GetChildren()) do
         if v.Name == "LoadingScreen" or v.Name == "NOVA_MAIN" or v.Name == "NOVA_FRIENDLY" then
             v:Destroy()
         end
     end
-    print("1️⃣ old GUIs cleared")
 
     local loading = createLoadingScreen()
     local ringTween = TweenService:Create(loading.ring, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false), {Rotation = 360})
@@ -1098,22 +1086,15 @@ local function main()
     end
     task.wait(0.2)
     loading.screen:Destroy()
-    print("2️⃣ loading screen done")
 
     local GUI = buildMainGUI()
-    print("3️⃣ buildMainGUI() returned", GUI ~= nil)
-
     local friendlyWindow = createFriendlyWindow()
-    print("4️⃣ createFriendlyWindow() returned", friendlyWindow ~= nil)
-
     _G.NOVA_GUI = GUI
 
     local btns = GUI.iconBtns
-    print("5️⃣ iconBtns count", #btns)
 
     -- Подключение кнопок
     btns["⏻"].btn.MouseButton1Click:Connect(function()
-        print("⏻ clicked")
         AimState.enabled = not AimState.enabled
         if AimState.enabled then
             btns["⏻"].glow.Visible = true
@@ -1156,7 +1137,6 @@ local function main()
     end)
 
     btns["🎲"].btn.MouseButton1Click:Connect(function()
-        print("🎲 clicked")
         Settings.RandomAim = not Settings.RandomAim
         btns["🎲"].glow.Visible = Settings.RandomAim
         btns["🎲"].glow.Color = Settings.RandomAim and Color3.fromRGB(255,200,50) or Color3.fromRGB(60,150,255)
@@ -1167,7 +1147,6 @@ local function main()
     end)
 
     btns["⌖"].btn.MouseButton1Click:Connect(function()
-        print("⌖ clicked")
         if Settings.AimPart == "Head" then
             Settings.AimPart = "HumanoidRootPart"
             Settings.BackupPart = "Torso"
@@ -1180,7 +1159,6 @@ local function main()
     end)
 
     btns["👁"].btn.MouseButton1Click:Connect(function()
-        print("👁 clicked")
         VisualState.xrayEnabled = not VisualState.xrayEnabled
         btns["👁"].glow.Visible = VisualState.xrayEnabled
         btns["👁"].glow.Color = VisualState.xrayEnabled and Color3.fromRGB(60,150,255) or Color3.fromRGB(255,255,255)
@@ -1189,7 +1167,6 @@ local function main()
     end)
 
     btns["🤝"].btn.MouseButton1Click:Connect(function()
-        print("🤝 clicked")
         if GUIState.friendlyOpen then
             friendlyWindow.gui.Enabled = false
             GUIState.friendlyOpen = false
@@ -1201,7 +1178,7 @@ local function main()
     end)
 
     btns["⚙"].btn.MouseButton1Click:Connect(function()
-        print("⚙ clicked – settings not implemented")
+        print("Settings – можно добавить меню настроек")
     end)
 
     GUI.closeBtn.MouseButton1Click:Connect(function()
@@ -1245,8 +1222,6 @@ local function main()
             GUIState.maximized = true
         end
     end)
-
-    print("6️⃣ all buttons connected")
 
     local function onCameraChanged()
         Camera = workspace.CurrentCamera
