@@ -1,5 +1,4 @@
--- NOVA v46.0 – СУПЕР-ОПТИМИЗИРОВАННАЯ (без аллокаций, Top-5, без sort)
--- Все улучшения применены: O(n) поиск, переиспользование таблиц, разделение потоков.
+-- NOVA v46.0 – ФИНАЛЬНАЯ СУПЕР-ОПТИМИЗИРОВАННАЯ ВЕРСИЯ (ПОЛНЫЙ РАБОЧИЙ СКРИПТ)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -16,9 +15,9 @@ local WINDOW_W, WINDOW_H = 260, 340
 local HEADER_H = 40
 local ICON_SIZE = 38
 local ICON_SPACING = 6
-local MAX_RAYCAST_CANDIDATES = 5  -- сколько ближайших целей проверяем на видимость
-local GUI_UPDATE_INTERVAL = 0.15   -- обновление текста раз в 0.15 с
-local XRAY_POSITION_INTERVAL = 0.025 -- обновление позиций боксов
+local MAX_RAYCAST_CANDIDATES = 5
+local GUI_UPDATE_INTERVAL = 0.15
+local XRAY_POSITION_INTERVAL = 0.025
 
 -- ============================================================
 -- НАСТРОЙКИ
@@ -50,14 +49,13 @@ local AimState = {
     killCount = 0,
     lostTimer = 0,
     searchTimer = 0,
-    randomAimPart = nil, -- выбранная часть для RandomAim
+    randomAimPart = nil,
 }
 local VisualState = {
     xrayEnabled = true,
     xrayTimer = 0,
     hue = 0,
     partsCache = {},
-    boxes = {},
     boxPool = {},
     poolSize = 0,
     xrayContainer = nil,
@@ -73,7 +71,7 @@ local GUIState = {
 }
 
 -- ============================================================
--- ЛОКАЛЬНЫЙ СПИСОК ИГРОКОВ (обновляется событиями)
+-- ЛОКАЛЬНЫЙ СПИСОК ИГРОКОВ
 -- ============================================================
 local localPlayers = {}
 local function updatePlayersList()
@@ -87,7 +85,6 @@ end
 Players.PlayerAdded:Connect(function(plr)
     if plr ~= Player then
         table.insert(localPlayers, plr)
-        -- подписываемся на CharacterAdded для очистки кэша
         plr.CharacterAdded:Connect(function()
             VisualState.partsCache[plr] = nil
         end)
@@ -103,7 +100,6 @@ Players.PlayerRemoving:Connect(function(plr)
     VisualState.partsCache[plr] = nil
     releaseBox(plr)
 end)
--- подписываемся на существующих игроков
 for _, plr in pairs(Players:GetPlayers()) do
     if plr ~= Player then
         plr.CharacterAdded:Connect(function()
@@ -114,7 +110,7 @@ end
 updatePlayersList()
 
 -- ============================================================
--- УТИЛИТЫ (оптимизированные)
+-- УТИЛИТЫ
 -- ============================================================
 local Utils = {}
 
@@ -126,7 +122,6 @@ function Utils.isValidPlayer(plr)
     return hum and hum.Health > 0
 end
 
--- Кэш частей с полем _list
 function Utils.getCachedParts(plr)
     if not plr then return nil end
     local cached = VisualState.partsCache[plr]
@@ -145,7 +140,6 @@ function Utils.getCachedParts(plr)
         if p then parts[name] = p end
     end
 
-    -- Список частей для X-Ray (только нужные для бокса)
     local xrayNames = {"Head","HumanoidRootPart","LeftFoot","RightFoot"}
     local list = {}
     for _, name in ipairs(xrayNames) do
@@ -193,7 +187,6 @@ function Utils.getCenter()
     return Vector2.new(vp.X/2 + Settings.CenterOffset.X, vp.Y/2 + Settings.CenterOffset.Y)
 end
 
--- Оптимизированная видимость без Unit
 function Utils.isVisible(plr, raycastParams, distLimit)
     if not Utils.isValidPlayer(plr) then return false end
     local part = Utils.getAimPart(plr)
@@ -202,7 +195,7 @@ function Utils.isVisible(plr, raycastParams, distLimit)
     local offset = part.Position - origin
     local distance = offset.Magnitude
     if distance > distLimit then return false end
-    local result = workspace:Raycast(origin, offset, raycastParams) -- offset вместо direction*Unit
+    local result = workspace:Raycast(origin, offset, raycastParams)
     if not result then return true end
     local hit = result.Instance
     local parent = hit.Parent
@@ -214,7 +207,7 @@ function Utils.isVisible(plr, raycastParams, distLimit)
 end
 
 -- ============================================================
--- FRIENDLY (по UserId)
+-- FRIENDLY
 -- ============================================================
 local Friendly = { dict = {} }
 
@@ -230,20 +223,21 @@ end
 function Friendly.clear() Friendly.dict = {} end
 
 -- ============================================================
--- ЗАГРУЗОЧНЫЙ ЭКРАН (упрощённый)
+-- ЗАГРУЗОЧНЫЙ ЭКРАН
 -- ============================================================
 local function createLoadingScreen()
-    -- ... (без изменений, оставляем как в предыдущей версии)
     local screen = Instance.new("ScreenGui")
     screen.Name = "LoadingScreen"
     screen.Parent = PlayerGui
     screen.DisplayOrder = 1000
+
     local overlay = Instance.new("Frame")
     overlay.Size = UDim2.new(1,0,1,0)
     overlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
     overlay.BackgroundTransparency = 0.8
     overlay.BorderSizePixel = 0
     overlay.Parent = screen
+
     local panel = Instance.new("Frame")
     panel.Size = UDim2.new(0,360,0,200)
     panel.Position = UDim2.new(0.5,-180,0.5,-100)
@@ -261,6 +255,7 @@ local function createLoadingScreen()
     panelStroke.Transparency = 0.5
     panelStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     panelStroke.Parent = panel
+
     local logo = Instance.new("TextLabel")
     logo.Size = UDim2.new(0,60,0,60)
     logo.Position = UDim2.new(0.5,-30,0,20)
@@ -270,6 +265,7 @@ local function createLoadingScreen()
     logo.TextSize = 36
     logo.Font = Enum.Font.GothamBold
     logo.Parent = panel
+
     local ring = Instance.new("ImageLabel")
     ring.Size = UDim2.new(0,70,0,70)
     ring.Position = UDim2.new(0.5,-35,0,15)
@@ -278,6 +274,7 @@ local function createLoadingScreen()
     ring.ImageColor3 = Color3.fromRGB(60,150,255)
     ring.ImageTransparency = 0.6
     ring.Parent = panel
+
     local statusText = Instance.new("TextLabel")
     statusText.Size = UDim2.new(1,0,0,20)
     statusText.Position = UDim2.new(0,0,0,90)
@@ -287,6 +284,7 @@ local function createLoadingScreen()
     statusText.TextSize = 14
     statusText.Font = Enum.Font.Gotham
     statusText.Parent = panel
+
     local versionText = Instance.new("TextLabel")
     versionText.Size = UDim2.new(1,0,0,16)
     versionText.Position = UDim2.new(0,0,0,115)
@@ -296,6 +294,7 @@ local function createLoadingScreen()
     versionText.TextSize = 11
     versionText.Font = Enum.Font.Gotham
     versionText.Parent = panel
+
     local progressBar = Instance.new("Frame")
     progressBar.Size = UDim2.new(0,280,0,4)
     progressBar.Position = UDim2.new(0.5,-140,0,145)
@@ -305,6 +304,7 @@ local function createLoadingScreen()
     local barCorner = Instance.new("UICorner")
     barCorner.CornerRadius = UDim.new(0,2)
     barCorner.Parent = progressBar
+
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0,0,1,0)
     fill.BackgroundColor3 = Color3.fromRGB(60,150,255)
@@ -313,14 +313,14 @@ local function createLoadingScreen()
     local fillCorner = Instance.new("UICorner")
     fillCorner.CornerRadius = UDim.new(0,2)
     fillCorner.Parent = fill
+
     return { screen = screen, ring = ring, statusText = statusText, fill = fill }
 end
 
 -- ============================================================
--- ПОСТРОЕНИЕ GUI (без изменений)
+-- ПОСТРОЕНИЕ GUI (ПОЛНАЯ ВЕРСИЯ)
 -- ============================================================
 local function buildMainGUI()
-    -- ... (полностью скопировать из предыдущей версии, т.к. он не меняется)
     local gui = Instance.new("ScreenGui")
     gui.Name = "NOVA_MAIN"
     gui.ResetOnSpawn = false
@@ -530,7 +530,7 @@ local function buildMainGUI()
 end
 
 -- ============================================================
--- FRIENDLY WINDOW с пулом строк
+-- FRIENDLY WINDOW (ПОЛНАЯ ВЕРСИЯ С ПУЛОМ)
 -- ============================================================
 local function createFriendlyWindow()
     local gui = Instance.new("ScreenGui")
@@ -612,7 +612,6 @@ local function createFriendlyWindow()
                 return row
             end
         end
-        -- создаём новую строку
         local frame = Instance.new("Frame")
         frame.Size = UDim2.new(1,0,0,32)
         frame.BackgroundColor3 = Color3.fromRGB(20,35,65)
@@ -682,7 +681,6 @@ local function createFriendlyWindow()
             row.action.Text = isF and "🗑" or "➕"
             row.action.TextColor3 = isF and Color3.fromRGB(255,100,100) or Color3.fromRGB(100,255,150)
             row.tag.Text = isF and "FRIEND" or ""
-            -- привязываем действие
             row.action.MouseButton1Click:Connect(function()
                 Friendly.toggle(plr)
                 if AimState.target == plr then AimState.target = nil end
@@ -696,7 +694,7 @@ local function createFriendlyWindow()
 end
 
 -- ============================================================
--- ОСНОВНАЯ ЛОГИКА (AIM, X-RAY) с пулом объектов
+-- X-RAY И AIM (ОПТИМИЗИРОВАННЫЕ)
 -- ============================================================
 local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -705,7 +703,7 @@ Player.CharacterAdded:Connect(function(char)
     raycastParams.FilterDescendantsInstances = {char}
 end)
 
--- Создание пула X-Ray боксов
+-- Пул X-Ray боксов
 local function ensurePoolSize(targetSize)
     while VisualState.poolSize < targetSize do
         VisualState.poolSize = VisualState.poolSize + 1
@@ -793,7 +791,6 @@ local function clearAllBoxes()
     end
 end
 
--- Обновление одного бокса (использует parts._list)
 local function updateBox(box, color)
     if not box or not box.player then return end
     local plr = box.player
@@ -841,7 +838,6 @@ local function updateBox(box, color)
     box.container.Visible = true
 end
 
--- Обновление X-Ray (вызывается из Heartbeat)
 local function updateXRay()
     if GUIState.destroyed then return end
     if not VisualState.xrayEnabled then
@@ -849,15 +845,13 @@ local function updateXRay()
         return
     end
 
-    VisualState.xrayTimer = VisualState.xrayTimer + 0.016 -- примерно 60fps, но не критично
+    VisualState.xrayTimer = VisualState.xrayTimer + 0.016
     local updatePos = VisualState.xrayTimer >= XRAY_POSITION_INTERVAL
     if updatePos then VisualState.xrayTimer = 0 end
 
     local color = Color3.fromHSV(VisualState.hue, 1, 1)
-    -- обновляем hue для следующего вызова (можно делать отдельно)
-    VisualState.hue = (VisualState.hue + 0.0032) % 1  -- 0.2 * dt, dt примерно 0.016
+    VisualState.hue = (VisualState.hue + 0.0032) % 1
 
-    -- Обновляем цвета всех боксов
     for _, box in ipairs(VisualState.boxPool) do
         if box.player then
             box.border.BackgroundColor3 = color
@@ -868,7 +862,6 @@ local function updateXRay()
 
     if not updatePos then return end
 
-    -- Освобождаем боксы для невалидных или дружественных
     for _, box in ipairs(VisualState.boxPool) do
         if box.player then
             if not Utils.isValidPlayer(box.player) or Friendly.isFriendly(box.player) then
@@ -877,7 +870,6 @@ local function updateXRay()
         end
     end
 
-    -- Собираем активных игроков прямо из localPlayers без создания новой таблицы
     local activeCount = 0
     for _, plr in ipairs(localPlayers) do
         if Utils.isValidPlayer(plr) and not Friendly.isFriendly(plr) then
@@ -886,16 +878,13 @@ local function updateXRay()
     end
     ensurePoolSize(activeCount)
 
-    -- Распределяем боксы (без создания usedBoxes)
     local boxIndex = 1
     for _, plr in ipairs(localPlayers) do
         if Utils.isValidPlayer(plr) and not Friendly.isFriendly(plr) then
-            -- ищем, есть ли уже бокс для этого игрока
             local assigned = false
             for i = boxIndex, #VisualState.boxPool do
                 if VisualState.boxPool[i].player == plr then
                     assigned = true
-                    -- меняем местами, чтобы не искать снова
                     if i ~= boxIndex then
                         VisualState.boxPool[i], VisualState.boxPool[boxIndex] = VisualState.boxPool[boxIndex], VisualState.boxPool[i]
                     end
@@ -904,7 +893,6 @@ local function updateXRay()
                 end
             end
             if not assigned then
-                -- берём первый свободный бокс, начиная с boxIndex
                 local found = false
                 for i = boxIndex, #VisualState.boxPool do
                     if VisualState.boxPool[i].player == nil then
@@ -920,10 +908,8 @@ local function updateXRay()
                         break
                     end
                 end
-                -- если не нашли, то расширяем пул (но мы уже ensurePoolSize)
                 if not found then
                     ensurePoolSize(VisualState.poolSize + 1)
-                    -- повторяем попытку (рекурсивно не надо, просто добавили)
                     local box = VisualState.boxPool[VisualState.poolSize]
                     box.player = plr
                     box.container.Visible = true
@@ -937,23 +923,20 @@ local function updateXRay()
         end
     end
 
-    -- Все боксы, начиная с boxIndex, должны быть свободными (освобождаем)
     for i = boxIndex, #VisualState.boxPool do
         if VisualState.boxPool[i].player then
             releaseBox(VisualState.boxPool[i].player)
         end
     end
 
-    -- Обновляем позиции всех занятых боксов (первые boxIndex-1)
     for i = 1, boxIndex - 1 do
         updateBox(VisualState.boxPool[i], color)
     end
 end
 
 -- ============================================================
--- AIM (оптимизированный поиск Top-5 без сортировки)
+-- AIM (Top-5 без сортировки)
 -- ============================================================
--- Используем фиксированные переменные для хранения топ-5 кандидатов
 local topCandidates = {
     {plr = nil, dist = math.huge},
     {plr = nil, dist = math.huge},
@@ -961,7 +944,6 @@ local topCandidates = {
     {plr = nil, dist = math.huge},
     {plr = nil, dist = math.huge},
 }
--- Чтобы не создавать новые таблицы, переиспользуем эти
 
 local function findBestTarget()
     if not Camera or not Player.Character or not Player.Character.Parent then return nil end
@@ -970,13 +952,11 @@ local function findBestTarget()
     local fovSq = Settings.FOV * Settings.FOV
     local limitSq = Settings.DistanceLimit * Settings.DistanceLimit
 
-    -- Инициализируем топ-5 с бесконечными расстояниями
     for i = 1, MAX_RAYCAST_CANDIDATES do
         topCandidates[i].plr = nil
         topCandidates[i].dist = math.huge
     end
 
-    -- Проходим по всем игрокам, обновляем топ-5
     for _, plr in ipairs(localPlayers) do
         if not Utils.isValidPlayer(plr) or Friendly.isFriendly(plr) then continue end
         local part = Utils.getAimPart(plr)
@@ -990,10 +970,8 @@ local function findBestTarget()
         local dy = screenPos.Y - center.Y
         local dist = dx*dx + dy*dy
         if dist < fovSq then
-            -- вставляем в топ-5
             for i = 1, MAX_RAYCAST_CANDIDATES do
                 if dist < topCandidates[i].dist then
-                    -- сдвигаем остальные
                     for j = MAX_RAYCAST_CANDIDATES, i+1, -1 do
                         topCandidates[j].plr = topCandidates[j-1].plr
                         topCandidates[j].dist = topCandidates[j-1].dist
@@ -1006,7 +984,6 @@ local function findBestTarget()
         end
     end
 
-    -- Проверяем видимость для топ-5 (по порядку)
     for i = 1, MAX_RAYCAST_CANDIDATES do
         local plr = topCandidates[i].plr
         if plr and Utils.isVisible(plr, raycastParams, Settings.DistanceLimit) then
@@ -1041,7 +1018,6 @@ end
 
 local function processAim(dt)
     if GUIState.destroyed or not Camera then return end
-    -- X-Ray обновляется отдельно в Heartbeat, здесь не вызываем
     if not AimState.enabled then return end
     AimState.searchTimer = AimState.searchTimer + dt
 
@@ -1078,7 +1054,6 @@ local function processAim(dt)
         AimState.lostTimer = 0
         AimState.smoothCF = nil
         AimState.targetCF = nil
-        -- Если RandomAim включён, выбираем случайную часть один раз
         if Settings.RandomAim then
             local parts = {"Head", "HumanoidRootPart"}
             AimState.randomAimPart = parts[math.random(1,2)]
@@ -1104,7 +1079,6 @@ local function main()
         end
     end
 
-    -- Загрузочный экран
     local loading = createLoadingScreen()
     local ringTween = TweenService:Create(loading.ring, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false), {Rotation = 360})
     ringTween:Play()
@@ -1122,12 +1096,10 @@ local function main()
     task.wait(0.2)
     loading.screen:Destroy()
 
-    -- Создаём GUI
     local GUI = buildMainGUI()
     local friendlyWindow = createFriendlyWindow()
     _G.NOVA_GUI = GUI
 
-    -- Привязка кнопок
     local btns = GUI.iconBtns
 
     btns["⏻"].btn.MouseButton1Click:Connect(function()
@@ -1217,7 +1189,6 @@ local function main()
         print("Settings – можно добавить меню настроек")
     end)
 
-    -- Кнопки окна
     GUI.closeBtn.MouseButton1Click:Connect(function()
         GUI.gui:Destroy()
         friendlyWindow.gui:Destroy()
@@ -1260,10 +1231,8 @@ local function main()
         end
     end)
 
-    -- Обработчики смены камеры
     local function onCameraChanged()
         Camera = workspace.CurrentCamera
-        -- Перепривязываем события изменения размера
         if Camera then
             Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
                 if GUI.updateCrosshair then GUI.updateCrosshair() end
@@ -1277,14 +1246,12 @@ local function main()
     workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(onCameraChanged)
     onCameraChanged()
 
-    -- Обновление friendly окна при изменении списка
     local function onPlayerListChange()
         if friendlyWindow.update then friendlyWindow.update() end
     end
     Players.PlayerAdded:Connect(onPlayerListChange)
     Players.PlayerRemoving:Connect(onPlayerListChange)
 
-    -- Клавиатура
     UserInputService.InputBegan:Connect(function(input, processed)
         if processed or GUIState.destroyed then return end
         if input.KeyCode == Enum.KeyCode.One then
@@ -1298,7 +1265,6 @@ local function main()
         end
     end)
 
-    -- Разделение: X-Ray на Heartbeat, прицел на RenderStepped
     RunService.Heartbeat:Connect(function()
         if GUIState.destroyed then return end
         updateXRay()
@@ -1308,7 +1274,6 @@ local function main()
         if GUIState.destroyed then return end
         processAim(dt)
 
-        -- Обновление GUI не чаще 0.15 секунды
         GUIState.guiUpdateTimer = GUIState.guiUpdateTimer + dt
         if GUIState.guiUpdateTimer >= GUI_UPDATE_INTERVAL then
             GUIState.guiUpdateTimer = 0
@@ -1326,7 +1291,6 @@ local function main()
         end
     end)
 
-    -- Уведомление
     game:GetService("StarterGui"):SetCore("SendNotification", {
         Title = "NOVA v46.0 (Super Optimized)",
         Text = "1 - Power | 2 - Head/Body | 3 - X-Ray | 4 - Random Aim",
@@ -1335,5 +1299,4 @@ local function main()
     print("✅ NOVA v46.0 SUPER OPTIMIZED LOADED")
 end
 
--- Запуск
 task.spawn(main)
